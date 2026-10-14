@@ -17,16 +17,16 @@ API_BASE = os.environ.get("TRIAGE_API_BASE", "http://127.0.0.1:8000")
 
 st.set_page_config(page_title="Incident Triage Agent", layout="wide")
 
-STEP_ICONS = {
-    "system": "⚙️",
-    "plan": "🧠",
-    "tool_call": "🔧",
-    "tool_result": "✅",
-    "tool_error": "⚠️",
-    "reflection": "💭",
-    "approval_request": "🙋",
-    "approval_decision": "👤",
-    "resolution": "🏁",
+STEP_LABELS = {
+    "system": "System",
+    "plan": "Plan",
+    "tool_call": "Tool Call",
+    "tool_result": "Tool Result",
+    "tool_error": "Tool Error",
+    "reflection": "Reflection",
+    "approval_request": "Approval Request",
+    "approval_decision": "Approval Decision",
+    "resolution": "Resolution",
 }
 
 
@@ -42,10 +42,9 @@ def api_post(path: str, json: dict | None = None):
 
 def render_transcript(run: dict) -> None:
     for s in run["transcript"]:
-        icon = STEP_ICONS.get(s["type"], "•")
-        label = s["type"].replace("_", " ").title()
-        with st.chat_message("assistant" if s["type"] != "approval_decision" else "user"):
-            st.markdown(f"**{icon} {label}**")
+        label = STEP_LABELS.get(s["type"], s["type"].replace("_", " ").title())
+        with st.container(border=True):
+            st.caption(label.upper())
             st.write(s["content"])
             if s.get("tool_name"):
                 st.caption(f"tool: `{s['tool_name']}` args: `{s.get('tool_args')}`")
@@ -66,15 +65,15 @@ def render_run(run: dict) -> None:
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        if status == "running" and st.button("▶ Step once", use_container_width=True):
+        if status == "running" and st.button("Step once", use_container_width=True):
             api_post(f"/runs/{run['id']}/step")
             st.rerun()
     with col2:
-        if status == "running" and st.button("⏩ Run autonomously", use_container_width=True):
+        if status == "running" and st.button("Run autonomously", use_container_width=True):
             api_post(f"/runs/{run['id']}/run")
             st.rerun()
     with col3:
-        if st.button("🔄 Refresh", use_container_width=True):
+        if st.button("Refresh", use_container_width=True):
             st.rerun()
 
     if status == "awaiting_approval" and run.get("pending_action"):
@@ -86,11 +85,11 @@ def render_run(run: dict) -> None:
         note = st.text_input("Note to agent (optional)", key=f"note_{run['id']}")
         c1, c2 = st.columns(2)
         with c1:
-            if st.button("✅ Approve", type="primary", use_container_width=True, key=f"approve_{run['id']}"):
+            if st.button("Approve", type="primary", use_container_width=True, key=f"approve_{run['id']}"):
                 api_post(f"/runs/{run['id']}/decision", {"approve": True, "note": note or None})
                 st.rerun()
         with c2:
-            if st.button("❌ Deny", use_container_width=True, key=f"deny_{run['id']}"):
+            if st.button("Deny", use_container_width=True, key=f"deny_{run['id']}"):
                 api_post(f"/runs/{run['id']}/decision", {"approve": False, "note": note or None})
                 st.rerun()
 
@@ -100,7 +99,8 @@ def render_run(run: dict) -> None:
 
 
 def main() -> None:
-    st.title("🚨 Incident Triage Agent — Operator Console")
+    st.title("Incident Triage Agent")
+    st.caption("Operator Console")
 
     try:
         api_get("/health")
