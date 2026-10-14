@@ -1,8 +1,8 @@
 # AI Interaction Log
 
-This project was built with Claude Code (Anthropic), model `claude-sonnet-5`, in a single
-assisted session. This log summarizes the actual prompts, decisions, and verification steps
-taken during that session (not a reconstruction after the fact).
+This project was built with an AI coding assistant (agentic CLI tool with file read/write and
+shell access) in a single assisted session. This log summarizes the actual prompts, decisions,
+and verification steps taken during that session (not a reconstruction after the fact).
 
 ## 1. Brief → scoping questions
 
@@ -10,7 +10,7 @@ taken during that session (not a reconstruction after the fact).
 platform engineering task, 2-4 hours, with a web UI, backend API, resumable state, and genuine
 autonomy (not a chatbot wrapper).
 
-**Claude's response:** rather than guessing the use case/stack, asked four targeted questions
+**Assistant's response:** rather than guessing the use case/stack, asked four targeted questions
 up front (use case, stack, tool backing, LLM provider) since each one determines a large chunk
 of the implementation and getting them wrong would waste the timebox. User chose:
 - Use case: **incident triage**
@@ -20,7 +20,7 @@ of the implementation and getting them wrong would waste the timebox. User chose
 
 ## 2. Architecture decisions made before writing code
 
-Claude reasoned through the brief's hard requirements (resumable state, operator UX, real
+The assistant reasoned through the brief's hard requirements (resumable state, operator UX, real
 backend API over the agent runtime, genuine autonomy/error-recovery/HITL) and mapped each onto
 a concrete design before writing anything:
 
@@ -52,7 +52,7 @@ Built and committed incrementally rather than as one dump, each stage runnable b
 
 ## 4. Verification performed during the session (not just "should work")
 
-Claude didn't just write the code — each stage was actually run before moving to the next:
+The assistant didn't just write the code — each stage was actually run before moving to the next:
 
 - Ran the agent loop directly in Python end-to-end with the mock planner: confirmed it
   investigates via all four read tools in order, proposes `rollback_deployment` once it sees the

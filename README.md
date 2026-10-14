@@ -128,4 +128,4 @@ approve or deny it from the UI.
 ## AI interaction log
 
 See [`AI_TRANSCRIPT.md`](./AI_TRANSCRIPT.md) for the full log of how this was built with AI
-assistance (Claude Code), including the prompts used and key decisions made along the way.
+assistance, including the prompts used and key decisions made along the way.
