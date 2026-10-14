@@ -145,13 +145,36 @@ def _extract_json(text: str) -> dict:
     return json.loads(match.group(0))
 
 
+def _gemini_keys() -> list[str]:
+    """Supports GEMINI_API_KEYS as a comma-separated list for quota rotation,
+    falling back to the single GEMINI_API_KEY for backwards compatibility."""
+    multi = os.environ.get("GEMINI_API_KEYS", "")
+    keys = [k.strip() for k in multi.split(",") if k.strip()]
+    if keys:
+        return keys
+    single = os.environ.get("GEMINI_API_KEY", "").strip()
+    return [single] if single else []
+
+
 def _gemini_plan(prompt: str) -> PlanResult:
     import google.generativeai as genai
 
-    genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel(os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest"))
-    response = model.generate_content(prompt)
-    return PlanResult.model_validate(_extract_json(response.text))
+    keys = _gemini_keys()
+    if not keys:
+        raise RuntimeError("no GEMINI_API_KEY / GEMINI_API_KEYS configured")
+
+    model_name = os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest")
+    last_exc: Exception | None = None
+    for key in keys:
+        try:
+            genai.configure(api_key=key)
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content(prompt)
+            return PlanResult.model_validate(_extract_json(response.text))
+        except Exception as exc:  # noqa: BLE001 - try next key on any failure (quota, invalid key, etc.)
+            last_exc = exc
+            continue
+    raise last_exc  # all keys exhausted/failed
 
 
 def _grok_plan(prompt: str) -> PlanResult:

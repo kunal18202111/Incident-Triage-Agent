@@ -62,10 +62,16 @@ frontend/ (Streamlit)  ──HTTP──>  backend/ (FastAPI)
 The agent's planner is an LLM call with tool definitions; the concrete provider is pluggable via
 `LLM_PROVIDER` in `.env`:
 
-- `gemini` — Google Gemini (`google-generativeai`, free tier)
+- `gemini` — Google Gemini (`google-generativeai`, free tier). Supports `GEMINI_API_KEYS` as a
+  comma-separated list of keys — if one hits its free-tier rate limit, the next is tried
+  automatically for that step, falling back to `GEMINI_API_KEY` (single key) if unset.
 - `grok` — xAI Grok (OpenAI-compatible endpoint)
 - `mock` — deterministic rule-based planner, **no API key required**. Useful for local dev/demo
   and for grading without burning quota. This is the default when no key is configured.
+
+Regardless of provider, if a planning call fails for any reason (rate limit, invalid key, network
+error), the agent falls back to the mock planner for that single step rather than halting the run
+— so a free-tier quota hit degrades gracefully instead of breaking the demo.
 
 ## Running locally
 
