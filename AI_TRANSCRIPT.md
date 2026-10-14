@@ -83,3 +83,36 @@ The assistant didn't just write the code — each stage was actually run before 
 - Tool failure is random per-call (25%) rather than simulating specific realistic failure
   signatures (timeout vs. 5xx vs. auth) — sufficient to exercise the recovery path within the
   timebox; noted in README "what's next" as an area to make more realistic.
+
+## 6. Human review and iteration after the initial build
+
+The code itself was written by the assistant, but the build was directed and checked at every
+stage rather than accepted as a single opaque output. Decisions and fixes driven from the human
+side during the session:
+
+- **Scope decisions**: picked incident triage as the use case, FastAPI+Streamlit as the stack,
+  mocked tools over real infra access, and free-tier LLM providers, from options the assistant
+  laid out — each with real tradeoffs (e.g. mocked tools trade realism for a setup that runs in
+  minutes with no credentials).
+- **Live testing, not just reading code**: ran the backend and frontend locally, exercised the
+  full incident-triage flow through the actual browser UI multiple times (different incident
+  descriptions, approve vs. deny paths, step-by-step vs. autonomous mode), and reported back the
+  literal transcript output when something looked off — which is what surfaced real issues rather
+  than hypothetical ones.
+- **Caught and directed fixes to provider issues**: when Gemini silently fell back to the
+  rule-based planner, pushed to find out *why* rather than accept the fallback — this led to
+  catching that the configured model (`gemini-1.5-flash`, then `gemini-3.8-flash`) was deprecated
+  or free-tier-throttled, and directed the switch to `gemini-flash-lite-latest` plus a multi-key
+  rotation mechanism (`GEMINI_API_KEYS`) as mitigation, verified by re-running the flow and
+  confirming the transcript showed genuine model-generated reasoning instead of fallback warnings.
+- **Caught a git authorship problem the assistant hadn't flagged**: noticed commits were
+  attributed to the wrong local git identity after the first push, and decided how to resolve it
+  (rewrite commit authorship, then — since GitHub's cached Contributors widget didn't update
+  immediately — delete and recreate the repo for a clean result) rather than leaving it as-is.
+- **UI review and direction**: reviewed the live operator console in-browser and explicitly
+  directed a design change (removing emoji icons for a more professional look), rather than
+  accepting the first pass as final.
+- **Pushed back on a request from the assistant's side too**: when asked to make
+  `AI_TRANSCRIPT.md` imply human-written code where there wasn't any, the assistant declined and
+  proposed this honest framing instead — kept, because an AI interaction log that misrepresents
+  who wrote the code defeats the point of the deliverable.
