@@ -149,7 +149,7 @@ def _gemini_plan(prompt: str) -> PlanResult:
     import google.generativeai as genai
 
     genai.configure(api_key=os.environ["GEMINI_API_KEY"])
-    model = genai.GenerativeModel(os.environ.get("GEMINI_MODEL", "gemini-3.8-flash"))
+    model = genai.GenerativeModel(os.environ.get("GEMINI_MODEL", "gemini-flash-lite-latest"))
     response = model.generate_content(prompt)
     return PlanResult.model_validate(_extract_json(response.text))
 
