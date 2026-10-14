@@ -8,24 +8,27 @@ This is not a chatbot wrapper — the agent runs a **plan → act → observe �
 own, persists its full state after every step (so a run survives a backend restart and can be
 resumed), and exposes that state over a real API so a separate UI can watch and steer it live.
 
-## Use case rationale
+## What it does
 
-Incident triage was chosen over the other options (infra provisioning, deployment orchestration,
-log analysis) because it naturally forces every property the brief asks for into one small
-surface area:
+Given a short incident description (e.g. "checkout-service p99 latency spiking, 5xx rate
+climbing"), the agent:
 
-- **Planning**: the agent doesn't follow a fixed script — it decides which tool to call next based
-  on what it's learned so far, and can change its mind (e.g. "logs look fine → check metrics
-  instead").
-- **Tool use**: multiple read tools (logs, metrics, service status, deploy history) plus
-  destructive action tools (restart, scale, rollback, page on-call).
-- **Error recovery**: tools fail transiently on purpose (simulated flakiness/timeouts); the agent
-  has to notice a tool error, decide to retry or route around it, and say so in its reasoning.
-- **Human-in-the-loop**: any action tool is gated — the agent proposes the action and *why*, the
-  run halts in `awaiting_approval`, and a human approves/denies from the UI before anything
-  "happens."
-- **Resumable state**: this maps directly onto how real incident response works — someone starts
-  the triage, steps away, comes back, approves a restart from their phone.
+1. **Investigates** by calling read-only tools — logs, metrics, service/pod status, deploy
+   history — choosing which to call next based on what it's learned so far rather than following
+   a fixed script.
+2. **Forms a hypothesis** about the root cause from that evidence (e.g. a recent deploy
+   correlating with DB connection pool exhaustion and crash-looping pods).
+3. **Proposes a remediation action** — restart, scale, rollback, or paging on-call — along with
+   its reasoning, and **halts for human approval** before anything destructive happens.
+4. **Recovers from tool failures**: tools fail transiently on purpose (simulated flakiness), so
+   the agent has to notice an error and retry or route around it instead of assuming every call
+   succeeds.
+5. **Resolves** the incident once the approved action succeeds, producing a final root-cause
+   summary.
+
+Every step — plan, tool call, tool result/error, approval request, human decision, resolution —
+is appended to the run's transcript and persisted immediately, so a run can be watched live,
+left mid-triage, and resumed later exactly where it stopped.
 
 ## Architecture
 
