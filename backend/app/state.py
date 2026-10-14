@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -19,7 +20,10 @@ DB_PATH = Path(__file__).resolve().parent.parent / "triage.db"
 
 
 def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    # FastAPI runs sync endpoint functions in a threadpool, so the connection
+    # must tolerate cross-thread use; a lock serializes access since sqlite3
+    # connections aren't safe for concurrent use from multiple threads at once.
+    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS runs (
@@ -35,27 +39,31 @@ def _connect() -> sqlite3.Connection:
 class RunStore:
     def __init__(self) -> None:
         self._conn = _connect()
+        self._lock = threading.Lock()
 
     def save(self, run: Run) -> None:
-        self._conn.execute(
-            "INSERT INTO runs (id, data, created_at) VALUES (?, ?, ?)\n"
-            "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
-            (run.id, run.model_dump_json(), run.created_at),
-        )
-        self._conn.commit()
+        with self._lock:
+            self._conn.execute(
+                "INSERT INTO runs (id, data, created_at) VALUES (?, ?, ?)\n"
+                "ON CONFLICT(id) DO UPDATE SET data = excluded.data",
+                (run.id, run.model_dump_json(), run.created_at),
+            )
+            self._conn.commit()
 
     def get(self, run_id: str) -> Optional[Run]:
-        row = self._conn.execute(
-            "SELECT data FROM runs WHERE id = ?", (run_id,)
-        ).fetchone()
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT data FROM runs WHERE id = ?", (run_id,)
+            ).fetchone()
         if row is None:
             return None
         return Run.model_validate(json.loads(row[0]))
 
     def list(self) -> list[Run]:
-        rows = self._conn.execute(
-            "SELECT data FROM runs ORDER BY created_at DESC"
-        ).fetchall()
+        with self._lock:
+            rows = self._conn.execute(
+                "SELECT data FROM runs ORDER BY created_at DESC"
+            ).fetchall()
         return [Run.model_validate(json.loads(r[0])) for r in rows]
 
 
